@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>对联创作投稿系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "微软雅黑", Arial, sans-serif;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
+        .container {
+            width: 500px;
+            padding: 40px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .form-item {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+            font-size: 14px;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            resize: none;
+        }
+        textarea {
+            min-height: 120px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result-message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>对联创作投稿</h2>
+        <form id="coupletForm">
+            <div class="form-item">
+                <label for="name">姓名</label>
+                <input type="text" id="name" placeholder="请输入你的姓名" required>
+            </div>
+            <div class="form-item">
+                <label for="class">班级</label>
+                <input type="text" id="class" placeholder="请输入你的班级" required>
+            </div>
+            <div class="form-item">
+                <label for="studentId">学号</label>
+                <input type="text" id="studentId" placeholder="请输入你的学号" required>
+            </div>
+            <div class="form-item">
+                <label for="couplet">对联创作</label>
+                <textarea id="couplet" placeholder="请输入你的对联作品（上联+下联+横批）" required></textarea>
+            </div>
+            <button type="submit">提交投稿</button>
+            <div id="message" class="result-message"></div>
+        </form>
+    </div>
+
+    <script>
+        // 替换为你的GitHub用户名和仓库名（必填！）
+        const GITHUB_USER = "你的GitHub用户名";
+        const GITHUB_REPO = "你的仓库名（如couplet-collection）";
+        
+        // 阻止表单默认提交
+        document.getElementById('coupletForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // 获取表单数据
+            const name = document.getElementById('name').value.trim();
+            const classInfo = document.getElementById('class').value.trim();
+            const studentId = document.getElementById('studentId').value.trim();
+            const couplet = document.getElementById('couplet').value.trim();
+            const messageDiv = document.getElementById('message');
+            
+            // 基础校验
+            if (!name || !classInfo || !studentId || !couplet) {
+                showMessage('请填写所有必填项！', 'error');
+                return;
+            }
+            
+            // 准备提交的数据
+            const submissionData = {
+                name: name,
+                class: classInfo,
+                studentId: studentId,
+                couplet: couplet,
+                submitTime: new Date().toLocaleString('zh-CN')
+            };
+
+            try {
+                // 调用GitHub Repository Dispatch API触发Actions
+                const response = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/dispatches`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json',
+                        'Authorization': `token 你的Fine-grained Token` // 注意：此处暂时写死，下文有更安全方案
+                    },
+                    body: JSON.stringify({
+                        event_type: 'couplet_submission', // 触发Actions的关键词
+                        client_payload: submissionData     // 传递的投稿数据
+                    })
+                });
+
+                if (response.ok) {
+                    showMessage(`✅ 投稿成功！感谢${name}同学的创作`, 'success');
+                    document.getElementById('coupletForm').reset();
+                    setTimeout(() => messageDiv.style.display = 'none', 3000);
+                } else {
+                    const errData = await response.json();
+                    throw new Error(errData.message || '提交失败');
+                }
+            } catch (error) {
+                console.error('提交错误：', error);
+                showMessage('提交失败，请稍后重试（错误：' + error.message + '）', 'error');
+            }
+        });
+        
+        // 提示消息显示函数
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `result-message ${type}`;
+            messageDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
