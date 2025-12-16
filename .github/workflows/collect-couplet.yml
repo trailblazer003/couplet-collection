@@ -1,0 +1,55 @@
+name: Collect Couplet Submissions to JSON
+
+# 触发条件：前端调用Dispatch API（event_type为couplet_submission）
+on:
+  repository_dispatch:
+    types: [couplet_submission]
+
+jobs:
+  collect-couplet-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出仓库代码
+        uses: actions/checkout@v4
+
+      - name: 创建submissions文件夹（若不存在）
+        run: mkdir -p submissions
+
+      - name: 初始化JSON文件（若不存在）
+        run: |
+          JSON_FILE="submissions/couplet_submissions.json"
+          if [ ! -f "$JSON_FILE" ]; then
+              echo "[]" > "$JSON_FILE"
+              echo "初始化空JSON文件"
+          fi
+
+      - name: 写入投稿数据到JSON文件
+        env:
+          # 从触发事件中获取投稿数据
+          PAYLOAD_NAME: ${{ github.event.client_payload.name }}
+          PAYLOAD_CLASS: ${{ github.event.client_payload.class }}
+          PAYLOAD_STUDENT_ID: ${{ github.event.client_payload.studentId }}
+          PAYLOAD_COUPLET: ${{ github.event.client_payload.couplet }}
+          PAYLOAD_TIME: ${{ github.event.client_payload.submitTime }}
+        run: |
+          JSON_FILE="submissions/couplet_submissions.json"
+          # 拼接新数据
+          NEW_DATA=$(jq -n \
+            --arg name "$PAYLOAD_NAME" \
+            --arg class "$PAYLOAD_CLASS" \
+            --arg studentId "$PAYLOAD_STUDENT_ID" \
+            --arg couplet "$PAYLOAD_COUPLET" \
+            --arg time "$PAYLOAD_TIME" \
+            '{"name": $name, "class": $class, "studentId": $studentId, "couplet": $couplet, "submitTime": $time}')
+          # 将新数据追加到JSON数组，并去重（按学号去重，避免重复提交）
+          jq --argjson new "$NEW_DATA" '. + [$new] | unique_by(.studentId)' "$JSON_FILE" > temp.json
+          mv temp.json "$JSON_FILE"
+
+      - name: 提交并推送JSON文件到仓库
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Add couplet submission: ${{ github.event.client_payload.studentId }}"
+          file_pattern: "submissions/couplet_submissions.json"
+        env:
+          # 使用仓库Secrets中的Token推送
+          GITHUB_TOKEN: ${{ secrets.COUPLET_TOKEN }}
