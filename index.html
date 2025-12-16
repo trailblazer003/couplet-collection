@@ -108,8 +108,8 @@
 
     <script>
         // 替换为你的GitHub用户名和仓库名（必填！）
-        const GITHUB_USER = "你的GitHub用户名";
-        const GITHUB_REPO = "你的仓库名（如couplet-collection）";
+        const GITHUB_USER = "trailblazer003";
+        const GITHUB_REPO = "couplet-collection";
         
         // 阻止表单默认提交
         document.getElementById('coupletForm').addEventListener('submit', async function(e) {
@@ -144,7 +144,7 @@
                     headers: {
                         'Accept': 'application/vnd.github.v3+json',
                         'Content-Type': 'application/json',
-                        'Authorization': `token 你的Fine-grained Token` // 注意：此处暂时写死，下文有更安全方案
+                        'Authorization': `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` // 注意：此处暂时写死，下文有更安全方案
                     },
                     body: JSON.stringify({
                         event_type: 'couplet_submission', // 触发Actions的关键词
